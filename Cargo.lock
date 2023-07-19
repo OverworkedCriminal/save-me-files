@@ -303,6 +303,7 @@ dependencies = [
  "clap",
  "env_logger",
  "log",
+ "regex",
  "tests-utilities",
 ]
 

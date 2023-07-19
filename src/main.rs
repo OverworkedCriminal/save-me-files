@@ -1,6 +1,9 @@
+mod suffixes;
+
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::path::PathBuf;
+use suffixes::read_suffixes;
 
 /// Simple application that finds all files with specified
 /// suffixes and copies them to dst_directory.
@@ -36,6 +39,8 @@ fn main() -> Result<()> {
 
     let args = Args::parse();
     validate_args(&args)?;
+
+    let suffixes = read_suffixes(&args.include_suffixes_file)?;
 
     Ok(())
 }
