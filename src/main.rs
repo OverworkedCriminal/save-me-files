@@ -21,7 +21,7 @@ struct Args {
     /// (e.g. '.txt', '.drawio.png' '_backup.txt').
     /// Each suffix should be written in new line.
     #[arg(short, long)]
-    include_extensions_file: PathBuf,
+    include_suffixes_file: PathBuf,
 
     /// Path to file that stores all excluded paths.
     /// If filepath to copy starts with one of the paths file is ignored.
@@ -44,7 +44,7 @@ fn validate_args(
     Args {
         src_directory,
         dst_directory,
-        include_extensions_file,
+        include_suffixes_file,
         exclude_paths_file,
     }: &Args,
 ) -> Result<()> {
@@ -62,10 +62,10 @@ fn validate_args(
         ));
     }
 
-    if !include_extensions_file.is_file() {
+    if !include_suffixes_file.is_file() {
         return Err(anyhow!(
-            "include_extensions_file '{}' is not a file",
-            include_extensions_file.to_string_lossy()
+            "include_suffixes_file '{}' is not a file",
+            include_suffixes_file.to_string_lossy()
         ));
     }
 
@@ -84,19 +84,15 @@ fn validate_args(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::{
-        env,
-        fs::{self, File},
-        path::PathBuf,
-    };
-    use uuid::Uuid;
+    use std::fs;
+    use tests_utilities::{create_tmp_directory, create_tmp_file, create_unique_tmp_path};
 
     #[test]
     fn validate_args_with_exclude() {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: Some(create_tmp_file()),
         };
 
@@ -104,7 +100,7 @@ mod test {
 
         fs::remove_dir(&args.src_directory).unwrap();
         fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
         fs::remove_file(&args.exclude_paths_file.unwrap()).unwrap();
 
         assert!(validation_result.is_ok());
@@ -115,7 +111,7 @@ mod test {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: None,
         };
 
@@ -123,7 +119,7 @@ mod test {
 
         fs::remove_dir(&args.src_directory).unwrap();
         fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_ok());
     }
@@ -133,14 +129,14 @@ mod test {
         let args = Args {
             src_directory: create_unique_tmp_path(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: None,
         };
 
         let validation_result = validate_args(&args);
 
         fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_err());
     }
@@ -150,7 +146,7 @@ mod test {
         let args = Args {
             src_directory: create_tmp_file(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: None,
         };
 
@@ -158,7 +154,7 @@ mod test {
 
         fs::remove_file(&args.src_directory).unwrap();
         fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_err());
     }
@@ -168,14 +164,14 @@ mod test {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_unique_tmp_path(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: None,
         };
 
         let validation_result = validate_args(&args);
 
         fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_err());
     }
@@ -185,7 +181,7 @@ mod test {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_tmp_file(),
-            include_extensions_file: create_tmp_file(),
+            include_suffixes_file: create_tmp_file(),
             exclude_paths_file: None,
         };
 
@@ -193,17 +189,17 @@ mod test {
 
         fs::remove_dir(&args.src_directory).unwrap();
         fs::remove_file(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_extensions_file).unwrap();
+        fs::remove_file(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_err());
     }
 
     #[test]
-    fn validate_args_include_extensions_file_not_exist() {
+    fn validate_args_include_suffixes_file_not_exist() {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_unique_tmp_path(),
+            include_suffixes_file: create_unique_tmp_path(),
             exclude_paths_file: None,
         };
 
@@ -216,11 +212,11 @@ mod test {
     }
 
     #[test]
-    fn validate_args_include_extensions_file_is_directory() {
+    fn validate_args_include_suffixes_file_is_directory() {
         let args = Args {
             src_directory: create_tmp_directory(),
             dst_directory: create_tmp_directory(),
-            include_extensions_file: create_tmp_directory(),
+            include_suffixes_file: create_tmp_directory(),
             exclude_paths_file: None,
         };
 
@@ -228,28 +224,8 @@ mod test {
 
         fs::remove_dir(&args.src_directory).unwrap();
         fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_dir(&args.include_extensions_file).unwrap();
+        fs::remove_dir(&args.include_suffixes_file).unwrap();
 
         assert!(validation_result.is_err());
-    }
-
-    fn create_unique_tmp_path() -> PathBuf {
-        let mut tmp_path = env::temp_dir();
-        let mut filename = "save-me-files-".to_string();
-        filename.push_str(&Uuid::new_v4().to_string());
-        tmp_path.push(filename);
-        tmp_path
-    }
-
-    fn create_tmp_file() -> PathBuf {
-        let tmp_filepath = create_unique_tmp_path();
-        File::create(&tmp_filepath).unwrap();
-        tmp_filepath
-    }
-
-    fn create_tmp_directory() -> PathBuf {
-        let tmp_directory_path = create_unique_tmp_path();
-        fs::create_dir(&tmp_directory_path).unwrap();
-        tmp_directory_path
     }
 }

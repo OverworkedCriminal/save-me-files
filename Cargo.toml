@@ -10,6 +10,7 @@ anyhow = "1.0.72"
 clap = { version = "4.3.15", features = ["derive"] }
 env_logger = "0.10.0"
 log = "0.4.19"
+regex = "1.9.1"
 
 [dev-dependencies]
-uuid = { version = "1.4.1", features = ["v4"] }
+tests-utilities = { path = "tests-utilities"}
