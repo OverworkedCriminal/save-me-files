@@ -2,7 +2,7 @@ mod suffixes;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use std::path::PathBuf;
+use std::{env, path::PathBuf};
 use suffixes::read_suffixes;
 
 /// Simple application that finds all files with specified
@@ -35,7 +35,7 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    env_logger::init();
+    init_logger();
 
     let args = Args::parse();
     validate_args(&args)?;
@@ -43,6 +43,13 @@ fn main() -> Result<()> {
     let suffixes = read_suffixes(&args.include_suffixes_file)?;
 
     Ok(())
+}
+
+fn init_logger() {
+    if let Err(_) = env::var("RUST_LOG") {
+        env::set_var("RUST_LOG", log::Level::Info.as_str());
+    }
+    env_logger::init();
 }
 
 fn validate_args(
