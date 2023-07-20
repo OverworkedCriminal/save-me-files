@@ -1,7 +1,9 @@
+mod exclusions;
 mod suffixes;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
+use exclusions::read_exclusions;
 use std::{env, path::PathBuf};
 use suffixes::read_suffixes;
 
@@ -41,6 +43,10 @@ fn main() -> Result<()> {
     validate_args(&args)?;
 
     let suffixes = read_suffixes(&args.include_suffixes_file)?;
+    let exclusions = args
+        .exclude_paths_file
+        .map(|path| read_exclusions(path))
+        .unwrap_or_else(|| Ok(Vec::new()))?;
 
     Ok(())
 }
