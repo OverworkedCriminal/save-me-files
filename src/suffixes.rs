@@ -14,7 +14,7 @@ pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
 
     let valid_filename_regex = Regex::new(r"^[a-zA-Z0-9_.\-\s]+$").unwrap();
 
-    let extensions = reader
+    let suffixes = reader
         .lines()
         .map(|line| line.unwrap().trim().to_owned())
         .filter(|line| {
@@ -26,7 +26,7 @@ pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
         })
         .collect();
 
-    Ok(extensions)
+    Ok(suffixes)
 }
 
 #[cfg(test)]
