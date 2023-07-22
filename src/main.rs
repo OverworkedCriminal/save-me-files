@@ -7,6 +7,8 @@ use exclusions::read_exclusions;
 use std::{env, path::PathBuf};
 use suffixes::read_suffixes;
 
+const COMMENT_LINE_PREFIX: &str = "//";
+
 /// Simple application that finds all files with specified
 /// suffixes and copies them to dst_directory.
 /// src_directory structure is preserved in dst_directory.

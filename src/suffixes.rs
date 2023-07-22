@@ -1,3 +1,4 @@
+use crate::COMMENT_LINE_PREFIX;
 use anyhow::Result;
 use regex::Regex;
 use std::{
@@ -6,13 +7,13 @@ use std::{
     path::Path,
 };
 
-const COMMENT_LINE_PREFIX: &str = "//";
+const VALID_SUFFIX_REGEX: &str = r"^[a-zA-Z0-9_.\-\s]+$";
 
 pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
 
-    let valid_filename_regex = Regex::new(r"^[a-zA-Z0-9_.\-\s]+$").unwrap();
+    let valid_filename_regex = Regex::new(VALID_SUFFIX_REGEX).unwrap();
 
     let suffixes = reader
         .lines()

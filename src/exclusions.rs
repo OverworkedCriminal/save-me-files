@@ -1,3 +1,4 @@
+use crate::COMMENT_LINE_PREFIX;
 use anyhow::Result;
 use std::{
     fs::File,
@@ -5,7 +6,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const COMMENT_LINE_PREFIX: &str = "//";
 
 pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
     let file = File::open(path)?;
