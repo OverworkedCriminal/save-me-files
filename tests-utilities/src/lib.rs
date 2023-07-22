@@ -5,7 +5,7 @@ use std::{
 };
 use uuid::Uuid;
 
-pub fn create_unique_tmp_path() -> PathBuf {
+pub fn tmp_path() -> PathBuf {
     let mut tmp_path = env::temp_dir();
     let mut filename = "save-me-files-".to_string();
     filename.push_str(&Uuid::new_v4().to_string());
@@ -19,7 +19,7 @@ pub struct TmpFile {
 
 impl TmpFile {
     pub fn new() -> Self {
-        let path = create_unique_tmp_path();
+        let path = tmp_path();
         File::create(&path).unwrap();
         Self { path }
     }
@@ -41,7 +41,7 @@ pub struct TmpDirectory {
 
 impl TmpDirectory {
     pub fn new() -> Self {
-        let path = create_unique_tmp_path();
+        let path = tmp_path();
         fs::create_dir(&path).unwrap();
         Self { path }
     }
@@ -96,15 +96,15 @@ mod test {
     }
 
     #[test]
-    fn create_unique_tmp_path_file_not_exists() {
-        let unique_path = create_unique_tmp_path();
+    fn tmp_path_file_not_exists() {
+        let unique_path = tmp_path();
         assert!(!unique_path.exists());
     }
 
     #[test]
-    fn create_unique_tmp_path_uniqueness() {
-        let first = create_unique_tmp_path();
-        let second = create_unique_tmp_path();
+    fn tmp_path_is_unique() {
+        let first = tmp_path();
+        let second = tmp_path();
 
         assert_ne!(first, second);
     }

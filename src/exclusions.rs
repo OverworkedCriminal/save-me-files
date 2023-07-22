@@ -31,85 +31,71 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
 mod test {
     use super::*;
     use std::fs;
-    use tests_utilities::{create_tmp_directory, create_tmp_file, create_unique_tmp_path};
+    use tests_utilities::{tmp_path, TmpDirectory, TmpFile};
 
     #[test]
     fn read_exclusions_all_exclusions() {
-        let filepath = create_tmp_file();
+        let file = TmpFile::new();
         let exclusions = [
-            create_tmp_directory(),
-            create_tmp_directory(),
-            create_tmp_directory(),
+            TmpDirectory::new(),
+            TmpDirectory::new(),
+            TmpDirectory::new(),
         ];
 
         fs::write(
-            &filepath,
+            file.path(),
             format!(
                 "{}\n{}\n{}",
-                exclusions[0].to_string_lossy(),
-                exclusions[1].to_string_lossy(),
-                exclusions[2].to_string_lossy()
+                exclusions[0].path().to_string_lossy(),
+                exclusions[1].path().to_string_lossy(),
+                exclusions[2].path().to_string_lossy()
             ),
         )
         .unwrap();
 
-        let read_exclusions = read_exclusions(filepath).unwrap();
+        let read_exclusions = read_exclusions(file.path()).unwrap();
 
-        let contains_all_exclusions = exclusions
-            .iter()
-            .map(|exclusion| read_exclusions.contains(exclusion))
-            .fold(true, |acc, value| acc && value);
         exclusions
             .into_iter()
-            .for_each(|path| fs::remove_dir(path).unwrap());
-
-        assert!(contains_all_exclusions);
+            .map(|exclusion_directory| exclusion_directory.path().to_path_buf())
+            .for_each(|path| assert!(read_exclusions.contains(&path)));
     }
 
     #[test]
     fn read_exclusions_all_exclusions_trimmed() {
-        let filepath = create_tmp_file();
+        let file = TmpFile::new();
         let exclusions = [
-            create_tmp_directory(),
-            create_tmp_directory(),
-            create_tmp_directory(),
+            TmpDirectory::new(),
+            TmpDirectory::new(),
+            TmpDirectory::new(),
         ];
 
         fs::write(
-            &filepath,
+            file.path(),
             format!(
                 " \t {}\n{} \t \n \t {} \t ",
-                exclusions[0].to_string_lossy(),
-                exclusions[1].to_string_lossy(),
-                exclusions[2].to_string_lossy()
+                exclusions[0].path().to_string_lossy(),
+                exclusions[1].path().to_string_lossy(),
+                exclusions[2].path().to_string_lossy()
             ),
         )
         .unwrap();
 
-        let read_exclusions = read_exclusions(filepath).unwrap();
+        let read_exclusions = read_exclusions(file.path()).unwrap();
 
-        let contains_all_exclusions = exclusions
-            .iter()
-            .map(|exclusion| read_exclusions.contains(exclusion))
-            .fold(true, |acc, value| acc && value);
         exclusions
             .into_iter()
-            .for_each(|path| fs::remove_dir(path).unwrap());
-
-        assert!(contains_all_exclusions);
+            .map(|exclusion_directory| exclusion_directory.path().to_path_buf())
+            .for_each(|path| assert!(read_exclusions.contains(&path)));
     }
 
     #[test]
     fn read_exclusions_ignore_non_existent_directories() {
-        let filepath = create_tmp_file();
-        let exclusions = [
-            create_unique_tmp_path(),
-            create_unique_tmp_path(),
-            create_unique_tmp_path(),
-        ];
+        let file = TmpFile::new();
+        let exclusions = [tmp_path(), tmp_path(), tmp_path()];
 
         fs::write(
-            &filepath,
+            file.path(),
             format!(
                 "{}\n{}\n{}",
                 exclusions[0].to_string_lossy(),
@@ -119,7 +105,7 @@ mod test {
         )
         .unwrap();
 
-        let read_exclusions = read_exclusions(filepath).unwrap();
+        let read_exclusions = read_exclusions(file.path()).unwrap();
 
         assert!(read_exclusions.is_empty());
     }
