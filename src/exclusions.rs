@@ -11,7 +11,7 @@ use std::{
 ///
 /// Exclusions are trimmed so they don't contain leading and following
 /// whitespaces.
-/// Exclusion is valid when it is path to existing directory.
+/// Exclusion is valid when it is an absolute path to existing directory.
 /// Every invalid exclusion is logged with WARN level unless
 /// it starts with [COMMENT_LINE_PREFIX].
 ///
@@ -31,11 +31,19 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
         .lines()
         .map(|line| PathBuf::from(line.unwrap().trim()))
         .filter(|path| {
-            let dir_exist = path.is_dir();
-            if !path.starts_with(COMMENT_LINE_PREFIX) && !dir_exist {
-                log::warn!("Exclusion directory not exist: {path:?}");
+            if !path.is_absolute() {
+                log::warn!(
+                    "Exclusion directory is not an absolute path: {}",
+                    path.to_string_lossy()
+                );
+                return false;
             }
-            dir_exist
+            if !path.starts_with(COMMENT_LINE_PREFIX) && !path.is_dir() {
+                log::warn!("Exclusion directory not exist: {}", path.to_string_lossy());
+                return false;
+            }
+
+            return true;
         })
         .collect();
 
@@ -116,6 +124,25 @@ mod test {
                 exclusions[0].to_string_lossy(),
                 exclusions[1].to_string_lossy(),
                 exclusions[2].to_string_lossy()
+            ),
+        )
+        .unwrap();
+
+        let read_exclusions = read_exclusions(file.path()).unwrap();
+
+        assert!(read_exclusions.is_empty());
+    }
+
+    #[test]
+    fn read_exclusions_ignore_relative_paths() {
+        let file = TmpFile::new();
+        let exclusion = TmpDirectory::new();
+
+        fs::write(
+            file.path(),
+            format!(
+                "{}",
+                exclusion.path().file_name().unwrap().to_string_lossy()
             ),
         )
         .unwrap();
