@@ -102,148 +102,164 @@ fn validate_args(
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::fs;
-    use tests_utilities::{create_tmp_directory, create_tmp_file, create_unique_tmp_path};
+    use tests_utilities::{tmp_path, TmpDirectory, TmpFile};
 
     #[test]
     fn validate_args_with_exclude() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+        let exclude_paths_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_tmp_file(),
-            exclude_paths_file: Some(create_tmp_file()),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-        fs::remove_file(&args.exclude_paths_file.unwrap()).unwrap();
-
-        assert!(validation_result.is_ok());
+        assert!(validate_args(&args).is_ok());
     }
 
     #[test]
     fn validate_args_no_exclude() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_tmp_file(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-
-        assert!(validation_result.is_ok());
+        assert!(validate_args(&args).is_ok());
     }
 
     #[test]
     fn validate_args_src_directory_not_exist() {
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_unique_tmp_path(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_tmp_file(),
+            src_directory: tmp_path(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-
-        assert!(validation_result.is_err());
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
     fn validate_args_src_directory_is_file() {
+        let src_directory = TmpFile::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_tmp_file(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_tmp_file(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_file(&args.src_directory).unwrap();
-        fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-
-        assert!(validation_result.is_err());
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
     fn validate_args_dst_directory_not_exist() {
+        let src_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_unique_tmp_path(),
-            include_suffixes_file: create_tmp_file(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: tmp_path(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-
-        assert!(validation_result.is_err());
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
     fn validate_args_dst_directory_is_file() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpFile::new();
+        let include_suffixes_file = TmpFile::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_tmp_file(),
-            include_suffixes_file: create_tmp_file(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_file(&args.dst_directory).unwrap();
-        fs::remove_file(&args.include_suffixes_file).unwrap();
-
-        assert!(validation_result.is_err());
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
     fn validate_args_include_suffixes_file_not_exist() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_unique_tmp_path(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: tmp_path(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
-
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_dir(&args.dst_directory).unwrap();
-
-        assert!(validation_result.is_err());
+        assert!(validate_args(&args).is_err());
     }
 
     #[test]
     fn validate_args_include_suffixes_file_is_directory() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpDirectory::new();
+
         let args = Args {
-            src_directory: create_tmp_directory(),
-            dst_directory: create_tmp_directory(),
-            include_suffixes_file: create_tmp_directory(),
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
 
-        let validation_result = validate_args(&args);
+        assert!(validate_args(&args).is_err());
+    }
 
-        fs::remove_dir(&args.src_directory).unwrap();
-        fs::remove_dir(&args.dst_directory).unwrap();
-        fs::remove_dir(&args.include_suffixes_file).unwrap();
+    #[test]
+    fn validate_args_exclude_paths_file_not_exist() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
 
-        assert!(validation_result.is_err());
+        let args = Args {
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            exclude_paths_file: Some(tmp_path()),
+        };
+
+        assert!(validate_args(&args).is_err());
+    }
+
+    #[test]
+    fn validate_args_exclude_paths_file_is_directory() {
+        let src_directory = TmpDirectory::new();
+        let dst_directory = TmpDirectory::new();
+        let include_suffixes_file = TmpFile::new();
+        let exclude_paths_file = TmpDirectory::new();
+
+        let args = Args {
+            src_directory: src_directory.path().to_path_buf(),
+            dst_directory: dst_directory.path().to_path_buf(),
+            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
+        };
+
+        assert!(validate_args(&args).is_err());
     }
 }
