@@ -13,7 +13,6 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
 
     let exclusions = reader
         .lines()
-        .into_iter()
         .map(|line| PathBuf::from(line.unwrap().trim()))
         .filter(|path| {
             let dir_exist = path.is_dir();
