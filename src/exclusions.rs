@@ -6,7 +6,23 @@ use std::{
     path::{Path, PathBuf},
 };
 
-
+///
+/// Read exclusions from file to the vector.
+///
+/// Exclusions are trimmed so they don't contain leading and following
+/// whitespaces.
+/// Exclusion is valid when it is path to existing directory.
+/// Every invalid exclusion is logged with WARN level unless
+/// it starts with [COMMENT_LINE_PREFIX].
+///
+/// #### Errors
+/// This function returns error when there's a problem with
+/// opening the file.
+///
+/// #### Panics
+/// This function panics when input file contains not valid
+/// UTF-8 characters.
+///
 pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);

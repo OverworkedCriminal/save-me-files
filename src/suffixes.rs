@@ -9,6 +9,23 @@ use std::{
 
 const VALID_SUFFIX_REGEX: &str = r"^[a-zA-Z0-9_.\-\s]+$";
 
+///
+/// Read suffixes from file to the vector.
+///
+/// Suffixes are trimmed so they don't contain leading and following
+/// whitespaces.
+/// Suffix is valid when it matches against regex: [VALID_SUFFIX_REGEX].
+/// Every invalid suffix is logged with WARN level unless it starts
+/// with [COMMENT_LINE_PREFIX].
+///
+/// #### Errors
+/// This function returns error when there's a problem with
+/// opening the file.
+///
+/// #### Panics
+/// This function panics when input file contains not valid
+/// UTF-8 characters.
+///
 pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
