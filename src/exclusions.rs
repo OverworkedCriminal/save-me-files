@@ -38,7 +38,10 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
                 );
                 return false;
             }
-            if !path.starts_with(COMMENT_LINE_PREFIX) && !path.is_dir() {
+            if path.to_string_lossy().starts_with(COMMENT_LINE_PREFIX) {
+                return false;
+            }
+            if !path.is_dir() {
                 log::warn!("Exclusion directory not exist: {}", path.to_string_lossy());
                 return false;
             }
@@ -110,6 +113,21 @@ mod test {
             .into_iter()
             .map(|exclusion_directory| exclusion_directory.path().to_path_buf())
             .for_each(|path| assert!(read_exclusions.contains(&path)));
+    }
+
+    #[test]
+    fn read_exclusions_ignore_comments() {
+        let file = TmpFile::new();
+
+        fs::write(
+            file.path(),
+            format!("{} {}", COMMENT_LINE_PREFIX, tmp_path().to_string_lossy()),
+        )
+        .unwrap();
+
+        let read_exclusions = read_exclusions(file.path()).unwrap();
+
+        assert!(read_exclusions.is_empty());
     }
 
     #[test]
