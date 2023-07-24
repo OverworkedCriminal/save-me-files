@@ -39,7 +39,11 @@ struct Args {
 }
 
 fn main() -> Result<()> {
-    init_logger();
+    env_logger::builder()
+        .target(env_logger::Target::Stdout)
+        .filter_level(log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
 
     let args = Args::parse();
     validate_args(&args)?;
@@ -51,13 +55,6 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| Ok(Vec::new()))?;
 
     Ok(())
-}
-
-fn init_logger() {
-    if let Err(_) = env::var("RUST_LOG") {
-        env::set_var("RUST_LOG", log::Level::Info.as_str());
-    }
-    env_logger::init();
 }
 
 fn validate_args(
