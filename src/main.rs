@@ -1,10 +1,12 @@
 mod exclusions;
+mod files;
 mod suffixes;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use exclusions::read_exclusions;
-use std::{env, path::PathBuf};
+use files::find_files_to_copy;
+use std::path::PathBuf;
 use suffixes::read_suffixes;
 
 const COMMENT_LINE_PREFIX: &str = "//";
@@ -53,6 +55,8 @@ fn main() -> Result<()> {
         .exclude_paths_file
         .map(|path| read_exclusions(path))
         .unwrap_or_else(|| Ok(Vec::new()))?;
+
+    let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
 
     Ok(())
 }
