@@ -14,4 +14,4 @@ regex = "1.9.1"
 walkdir = "2.3.3"
 
 [dev-dependencies]
-tests-utilities = { path = "tests-utilities"}
+tempfile = "3.7.0"
