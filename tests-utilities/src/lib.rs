@@ -1,15 +1,13 @@
 use std::{
     env,
     fs::{self, File},
-    path::{PathBuf, Path},
+    path::{Path, PathBuf},
 };
 use uuid::Uuid;
 
 pub fn tmp_path() -> PathBuf {
     let mut tmp_path = env::temp_dir();
-    let mut filename = "save-me-files-".to_string();
-    filename.push_str(&Uuid::new_v4().to_string());
-    tmp_path.push(filename);
+    tmp_path.push(create_unique_filename());
     tmp_path
 }
 
@@ -55,6 +53,10 @@ impl Drop for TmpDirectory {
     fn drop(&mut self) {
         fs::remove_dir(&self.path).unwrap();
     }
+}
+
+fn create_unique_filename() -> String {
+    "save-me-files-test-".to_string() + &Uuid::new_v4().to_string()
 }
 
 #[cfg(test)]
@@ -107,5 +109,13 @@ mod test {
         let second = tmp_path();
 
         assert_ne!(first, second);
+    }
+
+    #[test]
+    fn create_unique_filename_name_is_unique() {
+        let a = create_unique_filename();
+        let b = create_unique_filename();
+
+        assert_ne!(a, b);
     }
 }
