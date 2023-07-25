@@ -1,10 +1,12 @@
 mod exclusions;
+mod files;
 mod suffixes;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use exclusions::read_exclusions;
-use std::{env, path::PathBuf};
+use files::find_files_to_copy;
+use std::path::PathBuf;
 use suffixes::read_suffixes;
 
 const COMMENT_LINE_PREFIX: &str = "//";
@@ -54,6 +56,8 @@ fn main() -> Result<()> {
         .map(|path| read_exclusions(path))
         .unwrap_or_else(|| Ok(Vec::new()))?;
 
+    let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
+
     Ok(())
 }
 
@@ -101,14 +105,14 @@ fn validate_args(
 #[cfg(test)]
 mod test {
     use super::*;
-    use tests_utilities::{tmp_path, TmpDirectory, TmpFile};
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn validate_args_with_exclude() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
-        let exclude_paths_file = TmpFile::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
+        let exclude_paths_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
@@ -122,9 +126,9 @@ mod test {
 
     #[test]
     fn validate_args_no_exclude() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
@@ -138,11 +142,11 @@ mod test {
 
     #[test]
     fn validate_args_src_directory_not_exist() {
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
-            src_directory: tmp_path(),
+            src_directory: "save-me-files.test.noexistent.file".into(),
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
@@ -153,9 +157,9 @@ mod test {
 
     #[test]
     fn validate_args_src_directory_is_file() {
-        let src_directory = TmpFile::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
+        let src_directory = NamedTempFile::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
@@ -169,12 +173,12 @@ mod test {
 
     #[test]
     fn validate_args_dst_directory_not_exist() {
-        let src_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
+        let src_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
-            dst_directory: tmp_path(),
+            dst_directory: "save-me-files.test.noexistent.file".into(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
         };
@@ -184,9 +188,9 @@ mod test {
 
     #[test]
     fn validate_args_dst_directory_is_file() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpFile::new();
-        let include_suffixes_file = TmpFile::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = NamedTempFile::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
@@ -200,13 +204,13 @@ mod test {
 
     #[test]
     fn validate_args_include_suffixes_file_not_exist() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: tmp_path(),
+            include_suffixes_file: "save-me-files.test.noexistent.file".into(),
             exclude_paths_file: None,
         };
 
@@ -215,9 +219,9 @@ mod test {
 
     #[test]
     fn validate_args_include_suffixes_file_is_directory() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpDirectory::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = TempDir::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
@@ -231,15 +235,15 @@ mod test {
 
     #[test]
     fn validate_args_exclude_paths_file_not_exist() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
-            exclude_paths_file: Some(tmp_path()),
+            exclude_paths_file: Some("save-me-files.test.noexistent.file".into()),
         };
 
         assert!(validate_args(&args).is_err());
@@ -247,10 +251,10 @@ mod test {
 
     #[test]
     fn validate_args_exclude_paths_file_is_directory() {
-        let src_directory = TmpDirectory::new();
-        let dst_directory = TmpDirectory::new();
-        let include_suffixes_file = TmpFile::new();
-        let exclude_paths_file = TmpDirectory::new();
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
+        let exclude_paths_file = TempDir::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),

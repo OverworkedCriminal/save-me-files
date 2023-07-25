@@ -51,11 +51,11 @@ pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
 mod test {
     use super::*;
     use std::fs;
-    use tests_utilities::TmpFile;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn read_suffixes_all_suffixes() {
-        let file = TmpFile::new();
+        let file = NamedTempFile::new().unwrap();
         let suffixes = [".txt", "some.png", "-screenshot-19-05-1948"];
 
         fs::write(
@@ -73,7 +73,7 @@ mod test {
 
     #[test]
     fn read_suffixes_trimmed() {
-        let file = TmpFile::new();
+        let file = NamedTempFile::new().unwrap();
         let suffixes = [".txt", "some.png", "-screenshot-19-05-1948"];
 
         fs::write(
@@ -94,7 +94,7 @@ mod test {
 
     #[test]
     fn read_suffixes_ignore_invalid() {
-        let file = TmpFile::new();
+        let file = NamedTempFile::new().unwrap();
         let suffixes = ["invalid:suffix", "// comment that's also invalid suffix"];
 
         fs::write(file.path(), format!("{}\n{}\n", suffixes[0], suffixes[1])).unwrap();

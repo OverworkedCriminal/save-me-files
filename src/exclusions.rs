@@ -57,15 +57,15 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
 mod test {
     use super::*;
     use std::fs;
-    use tests_utilities::{tmp_path, TmpDirectory, TmpFile};
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn read_exclusions_all_exclusions() {
-        let file = TmpFile::new();
+        let file = NamedTempFile::new().unwrap();
         let exclusions = [
-            TmpDirectory::new(),
-            TmpDirectory::new(),
-            TmpDirectory::new(),
+            TempDir::new().unwrap(),
+            TempDir::new().unwrap(),
+            TempDir::new().unwrap(),
         ];
 
         fs::write(
@@ -89,11 +89,11 @@ mod test {
 
     #[test]
     fn read_exclusions_all_exclusions_trimmed() {
-        let file = TmpFile::new();
+        let file = NamedTempFile::new().unwrap();
         let exclusions = [
-            TmpDirectory::new(),
-            TmpDirectory::new(),
-            TmpDirectory::new(),
+            TempDir::new().unwrap(),
+            TempDir::new().unwrap(),
+            TempDir::new().unwrap(),
         ];
 
         fs::write(
@@ -117,31 +117,13 @@ mod test {
 
     #[test]
     fn read_exclusions_ignore_comments() {
-        let file = TmpFile::new();
-
-        fs::write(
-            file.path(),
-            format!("{} {}", COMMENT_LINE_PREFIX, tmp_path().to_string_lossy()),
-        )
-        .unwrap();
-
-        let read_exclusions = read_exclusions(file.path()).unwrap();
-
-        assert!(read_exclusions.is_empty());
-    }
-
-    #[test]
-    fn read_exclusions_ignore_non_existent_directories() {
-        let file = TmpFile::new();
-        let exclusions = [tmp_path(), tmp_path(), tmp_path()];
+        let file = NamedTempFile::new().unwrap();
 
         fs::write(
             file.path(),
             format!(
-                "{}\n{}\n{}",
-                exclusions[0].to_string_lossy(),
-                exclusions[1].to_string_lossy(),
-                exclusions[2].to_string_lossy()
+                "{} {}",
+                COMMENT_LINE_PREFIX, "save-me-files.test.noexistent.file"
             ),
         )
         .unwrap();
@@ -152,9 +134,29 @@ mod test {
     }
 
     #[test]
+    fn read_exclusions_ignore_non_existent_directories() {
+        let file = NamedTempFile::new().unwrap();
+        let exclusions = [
+            "save-me-files.test.noexistent.file1",
+            "save-me-files.test.noexistent.file2",
+            "save-me-files.test.noexistent.file3",
+        ];
+
+        fs::write(
+            file.path(),
+            format!("{}\n{}\n{}", exclusions[0], exclusions[1], exclusions[2]),
+        )
+        .unwrap();
+
+        let read_exclusions = read_exclusions(file.path()).unwrap();
+
+        assert!(read_exclusions.is_empty());
+    }
+
+    #[test]
     fn read_exclusions_ignore_relative_paths() {
-        let file = TmpFile::new();
-        let exclusion = TmpDirectory::new();
+        let file = NamedTempFile::new().unwrap();
+        let exclusion = TempDir::new().unwrap();
 
         fs::write(
             file.path(),
