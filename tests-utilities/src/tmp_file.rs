@@ -54,6 +54,18 @@ mod test {
     }
 
     #[test]
+    fn new_with_parent_directory_exist() {
+        let parent_path = tmp_path();
+        fs::create_dir(&parent_path);
+
+        let child = TmpFile::new_with_parent(&parent_path);
+        let file_exist = child.path().is_file();
+
+        fs::remove_dir(&parent_path);
+        assert!(file_exist);
+    }
+
+    #[test]
     fn new_with_parent_correct_parent() {
         let parent_path = tmp_path();
         fs::create_dir(&parent_path);
