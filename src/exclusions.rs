@@ -31,18 +31,18 @@ pub fn read_exclusions(path: impl AsRef<Path>) -> Result<Vec<PathBuf>> {
         .lines()
         .map(|line| PathBuf::from(line.unwrap().trim()))
         .filter(|path| {
+            let path_str = path.to_string_lossy();
+            if path_str.is_empty() || path_str.starts_with(COMMENT_LINE_PREFIX) {
+                return false;
+            }
+
             if !path.is_absolute() {
-                log::warn!(
-                    "Exclusion directory is not an absolute path: {}",
-                    path.to_string_lossy()
-                );
+                log::warn!("Exclusion directory is not an absolute path: {}", path_str);
                 return false;
             }
-            if path.to_string_lossy().starts_with(COMMENT_LINE_PREFIX) {
-                return false;
-            }
+
             if !path.is_dir() {
-                log::warn!("Exclusion directory not exist: {}", path.to_string_lossy());
+                log::warn!("Exclusion directory not exist: {}", path_str);
                 return false;
             }
 

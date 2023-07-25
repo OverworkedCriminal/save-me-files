@@ -36,10 +36,15 @@ pub fn read_suffixes(path: impl AsRef<Path>) -> Result<Vec<String>> {
         .lines()
         .map(|line| line.unwrap().trim().to_owned())
         .filter(|line| {
+            if line.is_empty() || line.starts_with(COMMENT_LINE_PREFIX) {
+                return false;
+            }
+
             let is_valid = valid_filename_regex.is_match(&line);
-            if !is_valid && !line.starts_with(COMMENT_LINE_PREFIX) {
+            if !is_valid {
                 log::warn!("Invalid suffix: {line}");
             }
+
             is_valid
         })
         .collect();
