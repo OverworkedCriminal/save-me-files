@@ -56,24 +56,30 @@ mod test {
     #[test]
     fn new_with_parent_directory_exist() {
         let parent_path = tmp_path();
-        fs::create_dir(&parent_path);
+        fs::create_dir(&parent_path).unwrap();
 
-        let child = TmpDirectory::new_with_parent(&parent_path);
-        let directory_exist = child.path().is_dir();
+        let directory_exist;
+        {
+            let child = TmpDirectory::new_with_parent(&parent_path);
+            directory_exist = child.path().is_dir();
+        }
 
-        fs::remove_dir(&parent_path);
+        fs::remove_dir(&parent_path).unwrap();
         assert!(directory_exist);
     }
 
     #[test]
     fn new_with_parent_correct_parent() {
         let parent_path = tmp_path();
-        fs::create_dir(&parent_path);
+        fs::create_dir(&parent_path).unwrap();
 
-        let child = TmpDirectory::new_with_parent(&parent_path);
-        let is_parent_correct = child.path().parent().unwrap() == parent_path;
+        let is_parent_correct;
+        {
+            let child = TmpDirectory::new_with_parent(&parent_path);
+            is_parent_correct = child.path().parent().unwrap() == parent_path;
+        }
 
-        fs::remove_dir(&parent_path);
+        fs::remove_dir(&parent_path).unwrap();
         assert!(is_parent_correct);
     }
 }
