@@ -1,6 +1,12 @@
 use std::path::{Path, PathBuf};
 use walkdir::{DirEntry, WalkDir};
 
+///
+/// Find files that should be copied and return their paths.
+/// 
+/// Files to copy need to end with one of the suffixes. Furthermore
+/// File's path can not start with any of the exclusions
+/// 
 pub fn find_files_to_copy(
     src_directory: &Path,
     suffixes: &Vec<String>,
@@ -24,7 +30,7 @@ pub fn find_files_to_copy(
 }
 
 fn should_keep_entry(entry: &DirEntry, exclusions: &Vec<PathBuf>) -> bool {
-    !entry.file_type().is_dir() || !exclusions.iter().any(|path| path == entry.path())
+    !entry.file_type().is_dir() || !exclusions.iter().any(|path| entry.path().starts_with(path))
 }
 
 fn should_copy_file(entry: &DirEntry, suffixes: &Vec<String>) -> bool {
@@ -132,6 +138,26 @@ mod test {
         remaining_files
             .iter()
             .for_each(|file| assert!(found_files.contains(&file.path().to_path_buf())))
+    }
+
+    #[test]
+    fn find_files_to_copy_exclude_path_above_src() {
+        let (dirs, files) = create_temp_dir_tree();
+        let root_dir = dirs[0].path();
+        let suffixes = files
+            .iter()
+            .map(|file| {
+                file.path()
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .collect();
+        let exclusions = vec![dirs[0].path().parent().unwrap().to_path_buf()];
+
+        let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
+        assert!(found_files.is_empty());
     }
 
     ///
