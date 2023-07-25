@@ -1,4 +1,4 @@
-use crate::tmp_path;
+use crate::{create_unique_filename, tmp_path};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -11,6 +11,12 @@ pub struct TmpDirectory {
 impl TmpDirectory {
     pub fn new() -> Self {
         let path = tmp_path();
+        fs::create_dir(&path).unwrap();
+        Self { path }
+    }
+
+    pub fn new_with_parent(parent: &Path) -> Self {
+        let path = parent.join(create_unique_filename());
         fs::create_dir(&path).unwrap();
         Self { path }
     }
@@ -45,5 +51,17 @@ mod test {
             assert!(tmp_directory_path.is_dir());
         }
         assert!(!tmp_directory_path.is_dir());
+    }
+
+    #[test]
+    fn new_with_parent_correct_parent() {
+        let parent_path = tmp_path();
+        fs::create_dir(&parent_path);
+
+        let child = TmpDirectory::new_with_parent(&parent_path);
+        let is_parent_correct = child.path().parent().unwrap() == parent_path;
+
+        fs::remove_dir(&parent_path);
+        assert!(is_parent_correct);
     }
 }
