@@ -21,6 +21,12 @@ impl TmpDirectory {
         Self { path }
     }
 
+    pub fn new_with_parent_and_name(parent: &Path, name: &str) -> Self {
+        let path = parent.join(name);
+        fs::create_dir(&path).unwrap();
+        Self { path }
+    }
+
     pub fn path(&self) -> &Path {
         self.path.as_path()
     }
@@ -81,5 +87,51 @@ mod test {
 
         fs::remove_dir(&parent_path).unwrap();
         assert!(is_parent_correct);
+    }
+
+    #[test]
+    fn new_with_parent_and_name_directory_exist() {
+        let parent_path = tmp_path();
+        fs::create_dir(&parent_path).unwrap();
+
+        let directory_exits;
+        {
+            let child = TmpDirectory::new_with_parent_and_name(&parent_path, "valid name.txt");
+            directory_exits = child.path().is_dir();
+        }
+
+        fs::remove_dir(&parent_path).unwrap();
+        assert!(directory_exits);
+    }
+
+    #[test]
+    fn new_with_parent_and_name_correct_parent() {
+        let parent_path = tmp_path();
+        fs::create_dir(&parent_path).unwrap();
+
+        let is_parent_correct;
+        {
+            let child = TmpDirectory::new_with_parent_and_name(&parent_path, "valid name.txt");
+            is_parent_correct = child.path().parent().unwrap() == parent_path;
+        }
+
+        fs::remove_dir(&parent_path).unwrap();
+        assert!(is_parent_correct);
+    }
+
+    #[test]
+    fn new_with_parent_and_name_correct_name() {
+        let parent_path = tmp_path();
+        fs::create_dir(&parent_path).unwrap();
+        let name = "filename.txt";
+
+        let is_name_correct;
+        {
+            let child = TmpDirectory::new_with_parent_and_name(&parent_path, name);
+            is_name_correct = child.path().file_name().unwrap().to_string_lossy() == name;
+        }
+
+        fs::remove_dir(&parent_path).unwrap();
+        assert!(is_name_correct);
     }
 }
