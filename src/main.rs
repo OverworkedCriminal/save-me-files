@@ -59,7 +59,7 @@ fn main() -> Result<()> {
 
     log::info!(
         "Reading suffixes from {}",
-        args.src_directory.to_string_lossy()
+        args.include_suffixes_file.to_string_lossy()
     );
     let suffixes = read_suffixes(&args.include_suffixes_file)?;
     let exclusions = args
