@@ -39,6 +39,12 @@ struct Args {
     /// Each path should be written in new line.
     #[arg(short, long)]
     exclude_paths_file: Option<PathBuf>,
+
+    /// Disable copying.
+    /// If present makes sure application stops before copying files.
+    /// It's useful when someone wants to check what files will be copied.
+    #[arg(long, default_value_t = false)]
+    no_copy: bool,
 }
 
 fn main() -> Result<()> {
@@ -69,12 +75,15 @@ fn main() -> Result<()> {
         args.src_directory.to_string_lossy()
     );
     let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
+    for file_path in files_to_copy.iter() {
+        log::info!("Will copy: {}", file_path.to_string_lossy());
+    }
+
     let needed_space = calculate_files_size(&files_to_copy);
     let available_space = fs4::available_space(&args.dst_directory).expect(&format!(
         "Failed to read available space at {}",
         args.dst_directory.to_string_lossy()
     ));
-
     if needed_space > available_space {
         let needed_space = Byte::from_bytes(needed_space as u128).get_appropriate_unit(true);
         let available_space = Byte::from_bytes(available_space as u128).get_appropriate_unit(true);
@@ -83,6 +92,11 @@ fn main() -> Result<()> {
             needed_space,
             available_space
         ));
+    }
+
+    if args.no_copy {
+        log::info!("Copying skipped");
+        return Ok(());
     }
 
     Ok(())
@@ -94,6 +108,7 @@ fn validate_args(
         dst_directory,
         include_suffixes_file,
         exclude_paths_file,
+        ..
     }: &Args,
 ) -> Result<()> {
     if !src_directory.is_dir() {
@@ -146,6 +161,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_ok());
@@ -162,6 +178,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_ok());
@@ -177,6 +194,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -193,6 +211,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -208,6 +227,7 @@ mod test {
             dst_directory: "save-me-files.test.noexistent.file".into(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -224,6 +244,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -239,6 +260,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: "save-me-files.test.noexistent.file".into(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -255,6 +277,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: None,
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -271,6 +294,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: Some("save-me-files.test.noexistent.file".into()),
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
@@ -288,6 +312,7 @@ mod test {
             dst_directory: dst_directory.path().to_path_buf(),
             include_suffixes_file: include_suffixes_file.path().to_path_buf(),
             exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
+            no_copy: false,
         };
 
         assert!(validate_args(&args).is_err());
