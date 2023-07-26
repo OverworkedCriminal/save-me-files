@@ -31,7 +31,7 @@ struct Args {
     /// (e.g. '.txt', '.drawio.png' '_backup.txt').
     /// Each suffix should be written in new line.
     #[arg(short, long)]
-    include_suffixes_file: PathBuf,
+    include_suffixes_file: Option<PathBuf>,
 
     /// Path to file that stores all excluded paths.
     /// If filepath to copy starts with one of the paths file is ignored.
@@ -57,11 +57,13 @@ fn main() -> Result<()> {
     let mut args = Args::parse();
     args = canonicalize_args(args)?;
 
-    log::info!(
-        "Reading suffixes from {}",
-        args.include_suffixes_file.to_string_lossy()
-    );
-    let suffixes = read_suffixes(&args.include_suffixes_file)?;
+    let suffixes = args
+        .include_suffixes_file
+        .map(|path| {
+            log::info!("Reading suffixes from {}", path.to_string_lossy());
+            read_suffixes(path)
+        })
+        .unwrap_or_else(|| Ok(vec!["".to_string()]))?;
     let exclusions = args
         .exclude_paths_file
         .map(|path| {
@@ -120,11 +122,14 @@ fn canonicalize_args(mut args: Args) -> Result<Args> {
         ));
     }
 
-    if !args.include_suffixes_file.is_file() {
-        return Err(anyhow!(
-            "include_suffixes_file '{}' is not a file",
-            args.include_suffixes_file.to_string_lossy()
-        ));
+    if let Some(include_suffixes_file) = &args.include_suffixes_file {
+        if !include_suffixes_file.is_file() {
+            return Err(anyhow!(
+                "include_suffixes_file '{}' is not a file",
+                include_suffixes_file.to_string_lossy()
+            ));
+        }
+        args.include_suffixes_file = Some(include_suffixes_file.canonicalize().unwrap());
     }
 
     if let Some(exclude_paths_file) = &args.exclude_paths_file {
@@ -139,7 +144,6 @@ fn canonicalize_args(mut args: Args) -> Result<Args> {
 
     args.src_directory = args.src_directory.canonicalize().unwrap();
     args.dst_directory = args.dst_directory.canonicalize().unwrap();
-    args.include_suffixes_file = args.include_suffixes_file.canonicalize().unwrap();
 
     Ok(args)
 }
@@ -150,7 +154,7 @@ mod test {
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
-    fn canonicalize_args_with_exclude() {
+    fn canonicalize_args_all_args_present() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -159,7 +163,7 @@ mod test {
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: Some(include_suffixes_file.path().to_path_buf()),
             exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
             no_copy: false,
         };
@@ -168,15 +172,14 @@ mod test {
     }
 
     #[test]
-    fn canonicalize_args_no_exclude() {
+    fn canonicalize_args_no_optional_args() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -187,12 +190,11 @@ mod test {
     #[test]
     fn canonicalize_args_src_directory_not_exist() {
         let dst_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: "save-me-files.test.noexistent.file".into(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -204,12 +206,11 @@ mod test {
     fn canonicalize_args_src_directory_is_file() {
         let src_directory = NamedTempFile::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -220,12 +221,11 @@ mod test {
     #[test]
     fn canonicalize_args_dst_directory_not_exist() {
         let src_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: "save-me-files.test.noexistent.file".into(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -237,12 +237,11 @@ mod test {
     fn canonicalize_args_dst_directory_is_file() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = NamedTempFile::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -258,7 +257,7 @@ mod test {
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: "save-me-files.test.noexistent.file".into(),
+            include_suffixes_file: Some("save-me-files.test.noexistent.file".into()),
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -275,7 +274,7 @@ mod test {
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: Some(include_suffixes_file.path().to_path_buf()),
             exclude_paths_file: None,
             no_copy: false,
         };
@@ -287,12 +286,11 @@ mod test {
     fn canonicalize_args_exclude_paths_file_not_exist() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: Some("save-me-files.test.noexistent.file".into()),
             no_copy: false,
         };
@@ -304,13 +302,12 @@ mod test {
     fn canonicalize_args_exclude_paths_file_is_directory() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
-        let include_suffixes_file = NamedTempFile::new().unwrap();
         let exclude_paths_file = TempDir::new().unwrap();
 
         let args = Args {
             src_directory: src_directory.path().to_path_buf(),
             dst_directory: dst_directory.path().to_path_buf(),
-            include_suffixes_file: include_suffixes_file.path().to_path_buf(),
+            include_suffixes_file: None,
             exclude_paths_file: Some(exclude_paths_file.path().to_path_buf()),
             no_copy: false,
         };
@@ -339,11 +336,13 @@ mod test {
                 .strip_prefix(&root)
                 .unwrap()
                 .to_path_buf(),
-            include_suffixes_file: include_suffixes_file
-                .path()
-                .strip_prefix(&root)
-                .unwrap()
-                .to_path_buf(),
+            include_suffixes_file: Some(
+                include_suffixes_file
+                    .path()
+                    .strip_prefix(&root)
+                    .unwrap()
+                    .to_path_buf(),
+            ),
             exclude_paths_file: Some(
                 exclude_paths_file
                     .path()
@@ -358,7 +357,7 @@ mod test {
 
         assert!(args.src_directory.is_absolute());
         assert!(args.dst_directory.is_absolute());
-        assert!(args.include_suffixes_file.is_absolute());
+        assert!(args.include_suffixes_file.unwrap().is_absolute());
         assert!(args.exclude_paths_file.unwrap().is_absolute());
     }
 }
