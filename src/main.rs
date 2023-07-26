@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use byte_unit::Byte;
 use clap::Parser;
 use exclusions::read_exclusions;
-use files::{calculate_files_size, find_files_to_copy};
+use files::{calculate_files_size, copy_files, find_files_to_copy};
 use std::path::PathBuf;
 use suffixes::read_suffixes;
 
@@ -98,6 +98,9 @@ fn main() -> Result<()> {
         log::info!("Copying skipped");
         return Ok(());
     }
+
+    log::info!("Copying files");
+    copy_files(&args.src_directory, &args.dst_directory, &files_to_copy);
 
     Ok(())
 }

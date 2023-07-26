@@ -12,6 +12,7 @@ clap = { version = "4.3.19", features = ["derive"] }
 env_logger = "0.10.0"
 fs4 = "0.6.6"
 log = "0.4.19"
+rayon = "1.7.0"
 regex = "1.9.1"
 walkdir = "2.3.3"
 
