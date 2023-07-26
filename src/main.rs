@@ -51,12 +51,23 @@ fn main() -> Result<()> {
     let args = Args::parse();
     validate_args(&args)?;
 
+    log::info!(
+        "Reading suffixes from {}",
+        args.src_directory.to_string_lossy()
+    );
     let suffixes = read_suffixes(&args.include_suffixes_file)?;
     let exclusions = args
         .exclude_paths_file
-        .map(|path| read_exclusions(path))
+        .map(|path| {
+            log::info!("Reading exclusions from {}", path.to_string_lossy());
+            read_exclusions(path)
+        })
         .unwrap_or_else(|| Ok(Vec::new()))?;
 
+    log::info!(
+        "Searching for files to copy starting at {}",
+        args.src_directory.to_string_lossy()
+    );
     let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
     let needed_space = calculate_files_size(&files_to_copy);
     let available_space = fs4::available_space(&args.dst_directory).expect(&format!(
