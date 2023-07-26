@@ -54,8 +54,8 @@ fn main() -> Result<()> {
         .parse_default_env()
         .init();
 
-    let args = Args::parse();
-    validate_args(&args)?;
+    let mut args = Args::parse();
+    args = canonicalize_args(args)?;
 
     log::info!(
         "Reading suffixes from {}",
@@ -105,46 +105,43 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn validate_args(
-    Args {
-        src_directory,
-        dst_directory,
-        include_suffixes_file,
-        exclude_paths_file,
-        ..
-    }: &Args,
-) -> Result<()> {
-    if !src_directory.is_dir() {
+fn canonicalize_args(mut args: Args) -> Result<Args> {
+    if !args.src_directory.is_dir() {
         return Err(anyhow!(
             "src_directory '{}' is not a directory",
-            src_directory.to_string_lossy()
+            args.src_directory.to_string_lossy()
         ));
     }
 
-    if !dst_directory.is_dir() {
+    if !args.dst_directory.is_dir() {
         return Err(anyhow!(
             "dst_directory '{}' is not a directory",
-            dst_directory.to_string_lossy()
+            args.dst_directory.to_string_lossy()
         ));
     }
 
-    if !include_suffixes_file.is_file() {
+    if !args.include_suffixes_file.is_file() {
         return Err(anyhow!(
             "include_suffixes_file '{}' is not a file",
-            include_suffixes_file.to_string_lossy()
+            args.include_suffixes_file.to_string_lossy()
         ));
     }
 
-    if let Some(exclude_paths_file) = exclude_paths_file {
+    if let Some(exclude_paths_file) = &args.exclude_paths_file {
         if !exclude_paths_file.is_file() {
             return Err(anyhow!(
                 "exclude_paths_file '{}' is not a file",
                 exclude_paths_file.to_string_lossy()
             ));
         }
+        args.exclude_paths_file = Some(exclude_paths_file.canonicalize().unwrap());
     }
 
-    Ok(())
+    args.src_directory = args.src_directory.canonicalize().unwrap();
+    args.dst_directory = args.dst_directory.canonicalize().unwrap();
+    args.include_suffixes_file = args.include_suffixes_file.canonicalize().unwrap();
+
+    Ok(args)
 }
 
 #[cfg(test)]
@@ -153,7 +150,7 @@ mod test {
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
-    fn validate_args_with_exclude() {
+    fn canonicalize_args_with_exclude() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -167,11 +164,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_ok());
+        assert!(canonicalize_args(args).is_ok());
     }
 
     #[test]
-    fn validate_args_no_exclude() {
+    fn canonicalize_args_no_exclude() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -184,11 +181,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_ok());
+        assert!(canonicalize_args(args).is_ok());
     }
 
     #[test]
-    fn validate_args_src_directory_not_exist() {
+    fn canonicalize_args_src_directory_not_exist() {
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
 
@@ -200,11 +197,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_src_directory_is_file() {
+    fn canonicalize_args_src_directory_is_file() {
         let src_directory = NamedTempFile::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -217,11 +214,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_dst_directory_not_exist() {
+    fn canonicalize_args_dst_directory_not_exist() {
         let src_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
 
@@ -233,11 +230,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_dst_directory_is_file() {
+    fn canonicalize_args_dst_directory_is_file() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = NamedTempFile::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -250,11 +247,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_include_suffixes_file_not_exist() {
+    fn canonicalize_args_include_suffixes_file_not_exist() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
 
@@ -266,11 +263,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_include_suffixes_file_is_directory() {
+    fn canonicalize_args_include_suffixes_file_is_directory() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = TempDir::new().unwrap();
@@ -283,11 +280,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_exclude_paths_file_not_exist() {
+    fn canonicalize_args_exclude_paths_file_not_exist() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -300,11 +297,11 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
     }
 
     #[test]
-    fn validate_args_exclude_paths_file_is_directory() {
+    fn canonicalize_args_exclude_paths_file_is_directory() {
         let src_directory = TempDir::new().unwrap();
         let dst_directory = TempDir::new().unwrap();
         let include_suffixes_file = NamedTempFile::new().unwrap();
@@ -318,6 +315,50 @@ mod test {
             no_copy: false,
         };
 
-        assert!(validate_args(&args).is_err());
+        assert!(canonicalize_args(args).is_err());
+    }
+
+    #[test]
+    fn canonicalize_args_paths_are_absolute() {
+        let src_directory = TempDir::new().unwrap();
+        let dst_directory = TempDir::new().unwrap();
+        let include_suffixes_file = NamedTempFile::new().unwrap();
+        let exclude_paths_file = NamedTempFile::new().unwrap();
+
+        let root = std::env::temp_dir();
+        std::env::set_current_dir(&root).unwrap();
+
+        let mut args = Args {
+            src_directory: src_directory
+                .path()
+                .strip_prefix(&root)
+                .unwrap()
+                .to_path_buf(),
+            dst_directory: dst_directory
+                .path()
+                .strip_prefix(&root)
+                .unwrap()
+                .to_path_buf(),
+            include_suffixes_file: include_suffixes_file
+                .path()
+                .strip_prefix(&root)
+                .unwrap()
+                .to_path_buf(),
+            exclude_paths_file: Some(
+                exclude_paths_file
+                    .path()
+                    .strip_prefix(&root)
+                    .unwrap()
+                    .to_path_buf(),
+            ),
+            no_copy: false,
+        };
+
+        args = canonicalize_args(args).unwrap();
+
+        assert!(args.src_directory.is_absolute());
+        assert!(args.dst_directory.is_absolute());
+        assert!(args.include_suffixes_file.is_absolute());
+        assert!(args.exclude_paths_file.unwrap().is_absolute());
     }
 }
