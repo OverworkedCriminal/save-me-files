@@ -3,19 +3,19 @@ use walkdir::{DirEntry, WalkDir};
 
 ///
 /// Find files that should be copied and return their paths.
-/// 
+///
 /// Files to copy need to end with one of the suffixes. Furthermore
 /// File's path can not start with any of the exclusions
-/// 
+///
 pub fn find_files_to_copy(
     src_directory: &Path,
-    suffixes: &Vec<String>,
-    exclusions: &Vec<PathBuf>,
+    suffixes: &[String],
+    exclusions: &[PathBuf],
 ) -> Vec<PathBuf> {
     WalkDir::new(src_directory)
         .min_depth(0)
         .into_iter()
-        .filter_entry(|entry| should_keep_entry(entry, &exclusions))
+        .filter_entry(|entry| should_keep_entry(entry, exclusions))
         .filter_map(|entry| match entry {
             Ok(entry) => Some(entry),
             Err(err) => {
@@ -29,11 +29,31 @@ pub fn find_files_to_copy(
         .collect()
 }
 
-fn should_keep_entry(entry: &DirEntry, exclusions: &Vec<PathBuf>) -> bool {
+///
+/// Calculate sum of files sizes.
+///
+/// When there's problem with reading file metadata, error is logged
+/// and file size is ignored.
+///
+pub fn calculate_files_size(files_paths: &Vec<PathBuf>) -> u64 {
+    files_paths
+        .iter()
+        .map(|file_path| std::fs::metadata(file_path))
+        .filter_map(|metadata| match metadata {
+            Ok(metadata) => Some(metadata.len()),
+            Err(err) => {
+                log::warn!("{err}");
+                None
+            }
+        })
+        .sum::<u64>()
+}
+
+fn should_keep_entry(entry: &DirEntry, exclusions: &[PathBuf]) -> bool {
     !entry.file_type().is_dir() || !exclusions.iter().any(|path| entry.path().starts_with(path))
 }
 
-fn should_copy_file(entry: &DirEntry, suffixes: &Vec<String>) -> bool {
+fn should_copy_file(entry: &DirEntry, suffixes: &[String]) -> bool {
     let filename = entry.file_name().to_string_lossy();
     suffixes.iter().any(|suffix| filename.ends_with(suffix))
 }
@@ -41,6 +61,7 @@ fn should_copy_file(entry: &DirEntry, suffixes: &Vec<String>) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::fs;
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
@@ -56,7 +77,7 @@ mod test {
                     .to_string_lossy()
                     .to_string()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let exclusions = Vec::new();
 
         let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
@@ -81,7 +102,7 @@ mod test {
                     .to_string_lossy()
                     .to_string()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let exclusions = Vec::new();
 
         let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
@@ -105,7 +126,7 @@ mod test {
                     .to_string_lossy()
                     .to_string()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let exclusions = vec![dirs[0].path().to_path_buf()];
 
         let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
@@ -126,11 +147,11 @@ mod test {
                     .to_string_lossy()
                     .to_string()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let exclusions = [&dirs[1], &dirs[3]]
             .iter()
             .map(|dir| dir.path().to_path_buf())
-            .collect();
+            .collect::<Vec<_>>();
 
         let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
         assert_eq!(found_files.len(), remaining_files.len());
@@ -153,11 +174,35 @@ mod test {
                     .to_string_lossy()
                     .to_string()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let exclusions = vec![dirs[0].path().parent().unwrap().to_path_buf()];
 
         let found_files = find_files_to_copy(&root_dir, &suffixes, &exclusions);
         assert!(found_files.is_empty());
+    }
+
+    #[test]
+    fn calculate_files_size_correct_sum() {
+        let files = [
+            NamedTempFile::new().unwrap(),
+            NamedTempFile::new().unwrap(),
+            NamedTempFile::new().unwrap(),
+        ];
+        fs::write(&files[0], "some unimportant text").unwrap();
+        fs::write(&files[1], "event more text").unwrap();
+        fs::write(&files[2], "That's the last one").unwrap();
+        let files_paths = files
+            .iter()
+            .map(|file| file.path().to_path_buf())
+            .collect::<Vec<_>>();
+        let files_size = files
+            .iter()
+            .map(|file| fs::metadata(&file).unwrap().len())
+            .sum::<u64>();
+
+        let calculated_size = calculate_files_size(&files_paths);
+
+        assert_eq!(files_size, calculated_size);
     }
 
     ///

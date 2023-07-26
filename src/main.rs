@@ -5,7 +5,7 @@ mod suffixes;
 use anyhow::{anyhow, Result};
 use clap::Parser;
 use exclusions::read_exclusions;
-use files::find_files_to_copy;
+use files::{find_files_to_copy, calculate_files_size};
 use std::path::PathBuf;
 use suffixes::read_suffixes;
 
@@ -57,6 +57,8 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| Ok(Vec::new()))?;
 
     let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
+    let files_size = calculate_files_size(&files_to_copy);
+
 
     Ok(())
 }
