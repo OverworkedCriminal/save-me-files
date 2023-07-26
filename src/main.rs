@@ -3,9 +3,10 @@ mod files;
 mod suffixes;
 
 use anyhow::{anyhow, Result};
+use byte_unit::Byte;
 use clap::Parser;
 use exclusions::read_exclusions;
-use files::{find_files_to_copy, calculate_files_size};
+use files::{calculate_files_size, find_files_to_copy};
 use std::path::PathBuf;
 use suffixes::read_suffixes;
 
@@ -57,8 +58,21 @@ fn main() -> Result<()> {
         .unwrap_or_else(|| Ok(Vec::new()))?;
 
     let files_to_copy = find_files_to_copy(&args.src_directory, &suffixes, &exclusions);
-    let files_size = calculate_files_size(&files_to_copy);
+    let needed_space = calculate_files_size(&files_to_copy);
+    let available_space = fs4::available_space(&args.dst_directory).expect(&format!(
+        "Failed to read available space at {}",
+        args.dst_directory.to_string_lossy()
+    ));
 
+    if needed_space > available_space {
+        let needed_space = Byte::from_bytes(needed_space as u128).get_appropriate_unit(true);
+        let available_space = Byte::from_bytes(available_space as u128).get_appropriate_unit(true);
+        return Err(anyhow!(
+            "There's not enough space to copy all files! Needed space {}, available space {}",
+            needed_space,
+            available_space
+        ));
+    }
 
     Ok(())
 }
